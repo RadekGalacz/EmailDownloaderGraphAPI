@@ -11,7 +11,7 @@ namespace EmailGraphAPI.Classes {
         public static void Configure() {
             if (!isConfigured) {
                 var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
-                XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+                XmlConfigurator.Configure(logRepository, new FileInfo("./Config/log4net.config"));
                 isConfigured = true;
             }
         }
