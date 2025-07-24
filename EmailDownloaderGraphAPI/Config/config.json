@@ -1,0 +1,9 @@
+{
+    "TenantId": "your-tenant-id-here",
+    "ClientId": "your-client-id-here",
+    "ClientSecret": "your-client-secret-here",
+    "Mailbox": "user@example.com",
+    "DownloadPath": "C:\\Emails\\",
+    "AllowedMailBoxes": [ "user@example.com", "anotheruser@example.com" ],
+    "StartDate": "2025-07-22"
+}
