@@ -5,7 +5,7 @@ using System.Reflection;
 namespace EmailGraphAPI.Classes {
 
     // Pomocná třída pro jednorázovou inicializaci logování pomocí log4net.
-    public static class LoggerSetup {
+    internal static class LoggerSetup {
         private static bool isConfigured = false;
 
         public static void Configure() {

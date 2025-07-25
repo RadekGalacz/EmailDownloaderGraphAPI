@@ -1,7 +1,4 @@
 ﻿using log4net;
-using log4net.Config;
-using System.Reflection;
-using System.Threading.Tasks;
 
 namespace EmailGraphAPI.Classes {
 
@@ -13,10 +10,13 @@ namespace EmailGraphAPI.Classes {
             try {
 
                 log.Info("Spouštím hlavní metodu aplikace...");
-                AppConfigProps config = AppController.LoadConfig();
 
-                GraphAuthenticator auth = new GraphAuthenticator(config);
-                await auth.DownloadEmail();
+                AppConfigProps config = AppController.LoadConfig(); // Spuštění staticé metody pro deserializaci z config.json do props
+                GraphAuthProvider auth = new GraphAuthProvider(config); // Autentizace aplikace
+                EmailDownloader email = new EmailDownloader(auth, config);
+
+                await email.DownloadEmails();
+
                 log.Info("=== Konec aplikace ===");
 
             }

@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace EmailGraphAPI.Classes {
 
     // Props odpovídající config.json
-    public class AppConfigProps {
+    internal class AppConfigProps {
         [JsonPropertyName("TenantId")]
         public string TenantId { get; set; }
         [JsonPropertyName("ClientId")]

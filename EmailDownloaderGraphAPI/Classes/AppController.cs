@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
 
 namespace EmailGraphAPI.Classes {
-    internal class AppController {
+    internal static class AppController {
 
         // Statická metoda pro přiřazení props z config.json
-        public static AppConfigProps LoadConfig() {
+        internal static AppConfigProps LoadConfig() {
 
             // JSON součásti aplikace
             string path = "./Config/config.json";
