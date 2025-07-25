@@ -80,6 +80,7 @@ namespace EmailGraphAPI.Classes {
                     else {
 
                         try {
+                            //Pokus o vytvoření složky
                             Directory.CreateDirectory(subfolderPath);
                         }
                         catch (IOException ex) {
@@ -92,6 +93,8 @@ namespace EmailGraphAPI.Classes {
                         await content.CopyToAsync(fs);
 
                         log.Info($"E-mail úspěšně uložen: {filePath}");
+
+                        // Přidat ID emailu do seznamu stažených emailů, aby se nestahoval znovu.
                         DownloadedIds(msg.InternetMessageId);
                     }
                 }
