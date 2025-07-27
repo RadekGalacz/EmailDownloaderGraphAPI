@@ -1,6 +1,6 @@
 ﻿using log4net;
 using Microsoft.Graph;
-using System.Globalization;
+using Microsoft.Graph.Models;
 
 namespace EmailGraphAPI.Classes {
     internal class EmailDownloader {
@@ -10,7 +10,7 @@ namespace EmailGraphAPI.Classes {
         private GraphServiceClient graphClient; // Graph API pro poskytování metod pro práci s emaily
 
         // Konstruktor třídy EmailDownloader
-        public EmailDownloader( GraphAuthProvider graphAuthProvide, AppConfigProps config) {
+        public EmailDownloader(GraphAuthProvider graphAuthProvide, AppConfigProps config) {
             this.graphAuthProvider = graphAuthProvide;
             this.config = config;
         }
@@ -38,15 +38,50 @@ namespace EmailGraphAPI.Classes {
                 graphClient = graphAuthProvider.GetAuthenticatedClient();
             }
 
+            List<Microsoft.Graph.Models.Message> allMessages = new List<Microsoft.Graph.Models.Message>();
+
             // Načtení seznamu zpráv z inboxu zadané emailové schránky
+
             var messages = await graphClient.Users[config.Mailbox]
                 .MailFolders["Inbox"]
                 .Messages
-                .GetAsync();
+                .GetAsync(requestConfiguration => {
+                    requestConfiguration.QueryParameters.Top = config.EmailPageSize; // První požadavek na API na počet e-mailů dle config.JSON
+                    requestConfiguration.QueryParameters.Select = new[] { "id", "sender", "subject", "body", "receivedDateTime", "attachments", "internetMessageId" };
+                    requestConfiguration.QueryParameters.Orderby = new[] { "receivedDateTime" }; // Seřazení podle data přijetí
+                    requestConfiguration.Headers.Add("Prefer", "outlook.body-content-type=\"text\"");
+                });
+            if (messages == null) {
+                log.Info("Žádné zprávy nebyly nalezeny.");
+                return allMessages;
+            }
+            await ProcessEmailPagesAsync(messages, allMessages);
+            log.Info($"Celkem načteno {allMessages.Count} e-mailů.");
+            return allMessages.OrderBy(msg => msg.ReceivedDateTime).ToList();
+        }
 
-            // Seřazení zpráv podle data přijetí
-            var orderedMessages = messages.Value.OrderBy(msg => msg.ReceivedDateTime).ToList();
-            return orderedMessages;
+        // Asynchronní metoda pro zpracování emailů pomocí strákování
+        // https://learn.microsoft.com/en-us/graph/sdks/paging?tabs=csharp
+        public async Task ProcessEmailPagesAsync(MessageCollectionResponse messages, List<Microsoft.Graph.Models.Message> allMessages) {
+            // Vytvoření PageIterator pro stránkování
+            var pageIterator = PageIterator<Microsoft.Graph.Models.Message, MessageCollectionResponse>
+                .CreatePageIterator(
+                    graphClient,
+                    messages,
+                    // Callback pro zpracování každé zprávy
+                    (msg) => {
+                        allMessages.Add(msg); // Přidání zprávy do seznamu
+                        log.Info($"Načten e-mail: {msg.Subject}");
+                        return true; // Pokračovat v iteraci
+                    },
+                    // Konfigurace dalších požadavků
+                    (req) => {
+                        req.Headers.Add("Prefer", "outlook.body-content-type=\"text\"");
+                        return req;
+                    });
+
+            // Spuštění iterace přes všechny stránky
+            await pageIterator.IterateAsync();
         }
 
         // Metoda pro vytvoření složky (pokud neexistuje) dle cesty načtené z config.JSON
@@ -73,7 +108,7 @@ namespace EmailGraphAPI.Classes {
         public async Task SaveIdsToFile(string id) {
             if (!string.IsNullOrWhiteSpace(id)) {
                 // Uložení ID emailo do souboru downloadedEmails.TXT pro zamezení opětovného stažení
-                string downloadedPath = Path.Combine(config.DownloadPath, "downloadedEmails.TXT");
+                string downloadedPath = Path.Combine(config.DownloadPath, "downloadedEmails.txt");
                 await File.AppendAllTextAsync(downloadedPath, id + Environment.NewLine);
                 log.Debug($"Zapsáno ID emailu do seznamu stažených: {id}");
             }
@@ -81,10 +116,10 @@ namespace EmailGraphAPI.Classes {
 
         // Asynchronní metoda pro načitání id emailů ze souboru donwloadedEmails.TXT
         public async Task<List<string>> GetSavedIds() {
-            string downloadedPath = Path.Combine(config.DownloadPath, "downloadedEmails.TXT");
+            string downloadedPath = Path.Combine(config.DownloadPath, "downloadedEmails.txt");
 
             if (!File.Exists(downloadedPath)) {
-                log.Warn("Soubor downloadedEmails.TXT neexistuje – bude vytvořen při prvním stažení.");
+                log.Warn("Soubor downloadedEmails.txt neexistuje – bude vytvořen při prvním stažení.");
                 return new List<string>();  // Soubor neexistuje, přidat pouze prázdný seznam
             }
             try {
@@ -106,7 +141,7 @@ namespace EmailGraphAPI.Classes {
         }
 
         // Metoda pro vytvoření unikátních názvu podsložek
-        public async Task <string> CreateUniqueFolderPath(string basePath, string subject) {
+        public async Task<string> CreateUniqueFolderPath(string basePath, string subject) {
             // Oříznutí délky názvu předmětu na maxLength
             var maxLength = 100;
             if (subject.Length > maxLength) {
@@ -132,13 +167,13 @@ namespace EmailGraphAPI.Classes {
                 // Ověření přístupu podle "AllowedMailBoxes" z config .json
                 AuthenticationMailBoxesCheck();
 
-                // Parsoání datumu z config.JSON
-                var configStartDate = DateTime.ParseExact(config.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture);
                 var orderedMessages = await LoadEmailsAsync(); // Přiřazení metody načtených emaliů do proměnné
 
                 // Cysklus pro každý email ve složce Inbox
                 foreach (var msg in orderedMessages) {
                     log.Info($"Zpracovávám e-mail s předmětem: '{msg.Subject}'");
+
+                    // Content pro uložení celéhoobsahu zprávy - včetně příloh
                     var content = await graphClient.Users[config.Mailbox]
                         .Messages[msg.Id]
                         .Content
@@ -150,7 +185,7 @@ namespace EmailGraphAPI.Classes {
                     if (emailReceivedDateTime == null) continue;
 
                     // Filtrování: jen zprávy od určitého data
-                    if (emailReceivedDateTime.Value.Date < configStartDate.Date) {
+                    if (emailReceivedDateTime.Value.Date < config.StartDate) {
                         log.Info("E-mail je starší než povolené datum, přeskakuji...");
                         continue;
                     }

@@ -18,6 +18,8 @@ namespace EmailGraphAPI.Classes {
         [JsonPropertyName("DownloadPath")]
         public string DownloadPath { get; set; }
         [JsonPropertyName("StartDate")]
-        public string StartDate { get; set; }
+        public DateTime StartDate { get; set; }
+        [JsonPropertyName("EmailPageSize")]
+        public int EmailPageSize { get; set; }
     }
 }
