@@ -171,6 +171,8 @@ namespace EmailGraphAPI.Classes {
                 // Vytvoření Hlavní složky pro emaily - podle config.JSON
                 CreateFolderForEmails();
 
+                log.Info($"Z config.json bylo načteno datum pro stažení emailů od: {config.StartDate.Date.ToString("yyyy-MM-dd")}");
+
                 // Cysklus pro každý email ve složce Inbox
                 foreach (var msg in orderedMessages) {
                     log.Info($"Zpracovávám e-mail s předmětem: '{msg.Subject}'");

@@ -3,7 +3,7 @@
 namespace EmailGraphAPI.Classes {
     internal class AppController {
 
-        // Asynchronní metoda pro přiřazení props z config.json
+        // Metoda pro přiřazení props z config.json
        public static AppConfigProps LoadConfig(string path = "./Config/config.json") {
            
             if (!File.Exists(path)) {
