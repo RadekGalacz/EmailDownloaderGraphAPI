@@ -13,6 +13,7 @@ Tato konzolová aplikace slouží ke stahování e-mailů z Microsoft 365 pomoc�
 
 - Připojení k e-mailové schránce zadané v konfiguraci (`Mailbox`)
 - Stáhne všechny přijaté e-maily od definovaného data (`StartDate`) v pořadí, v jakém byly přijaté, až po nejnovější
+- Umožňuje stránkování e-mailů při stahování
 - Při dalším spuštění stáhne pouze nové, dosud nestáhnuté e-maily
 - Každý e-mail je uložen do složky pojmenované podle jeho předmětu
 - Uložený e-mail obsahuje i přílohy
@@ -33,5 +34,6 @@ Příklad:
     "Mailbox": "user@example.com",
     "DownloadPath": "C:\\Emails\\",
     "AllowedMailBoxes": [ "user@example.com", "anotheruser@example.com" ],
-    "StartDate": "2025-07-22"
+    "StartDate": "2025-07-22",
+    "EmailPageSize": 10
 }
