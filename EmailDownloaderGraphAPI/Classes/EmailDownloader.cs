@@ -16,7 +16,7 @@ namespace EmailGraphAPI.Classes {
         }
 
         // Metoda pro kontrolu autentizace emailů z config.JSON
-        public void AuthenticationMailBoxesCheck() {
+        private void AuthenticationMailBoxesCheck() {
 
             if (!config.AllowedMailBoxes.Contains(config.Mailbox)) {
                 log.Error($"Nepovolený pokus o přístup ke schránce: {config.Mailbox}");
@@ -29,7 +29,7 @@ namespace EmailGraphAPI.Classes {
         }
 
         // Metoda vrací seřazené emaily v pořadí, v jakém přišly
-        public async Task<List<Microsoft.Graph.Models.Message>> LoadEmailsAsync() {
+        private async Task<List<Microsoft.Graph.Models.Message>> LoadEmailsAsync() {
 
             log.Info("=== Spouštím aplikaci pro stahování e-mailů ===");
 
@@ -41,7 +41,6 @@ namespace EmailGraphAPI.Classes {
             List<Microsoft.Graph.Models.Message> allMessages = new List<Microsoft.Graph.Models.Message>();
 
             // Načtení seznamu zpráv z inboxu zadané emailové schránky
-
             var messages = await graphClient.Users[config.Mailbox]
                 .MailFolders["Inbox"]
                 .Messages
@@ -62,7 +61,7 @@ namespace EmailGraphAPI.Classes {
 
         // Asynchronní metoda pro zpracování emailů pomocí strákování
         // https://learn.microsoft.com/en-us/graph/sdks/paging?tabs=csharp
-        public async Task ProcessEmailPagesAsync(MessageCollectionResponse messages, List<Microsoft.Graph.Models.Message> allMessages) {
+        private async Task ProcessEmailPagesAsync(MessageCollectionResponse messages, List<Microsoft.Graph.Models.Message> allMessages) {
             // Vytvoření PageIterator pro stránkování
             var pageIterator = PageIterator<Microsoft.Graph.Models.Message, MessageCollectionResponse>
                 .CreatePageIterator(
@@ -85,7 +84,7 @@ namespace EmailGraphAPI.Classes {
         }
 
         // Metoda pro vytvoření složky (pokud neexistuje) dle cesty načtené z config.JSON
-        public void CreateFolderForEmails() {
+        private void CreateFolderForEmails() {
             DirectoryInfo di = new DirectoryInfo(config.DownloadPath);
             int i = 1;
 
@@ -105,7 +104,7 @@ namespace EmailGraphAPI.Classes {
         }
 
         // Asynchronní metoda pro ukládání id emailů do souboru donwloadedEmails.TXT
-        public async Task SaveIdsToFile(string id) {
+        private async Task SaveIdsToFile(string id) {
             if (!string.IsNullOrWhiteSpace(id)) {
                 // Uložení ID emailo do souboru downloadedEmails.TXT pro zamezení opětovného stažení
                 string downloadedPath = Path.Combine(config.DownloadPath, "downloadedEmails.txt");
@@ -115,7 +114,7 @@ namespace EmailGraphAPI.Classes {
         }
 
         // Asynchronní metoda pro načitání id emailů ze souboru donwloadedEmails.TXT
-        public async Task<List<string>> GetSavedIds() {
+        private async Task<List<string>> GetSavedIds() {
             string downloadedPath = Path.Combine(config.DownloadPath, "downloadedEmails.txt");
 
             if (!File.Exists(downloadedPath)) {
@@ -123,7 +122,7 @@ namespace EmailGraphAPI.Classes {
                 return new List<string>();  // Soubor neexistuje, přidat pouze prázdný seznam
             }
             try {
-                string[] lines = File.ReadAllLines(downloadedPath);
+                string[] lines = await File.ReadAllLinesAsync(downloadedPath);
                 var ids = new List<string>();
 
                 // Přidání ID emailů načtených z .TXT souboru
@@ -141,7 +140,7 @@ namespace EmailGraphAPI.Classes {
         }
 
         // Metoda pro vytvoření unikátních názvu podsložek
-        public async Task<string> CreateUniqueFolderPath(string basePath, string subject) {
+        private async Task<string> CreateUniqueFolderPath(string basePath, string subject) {
             // Oříznutí délky názvu předmětu na maxLength
             var maxLength = 100;
             if (subject.Length > maxLength) {
