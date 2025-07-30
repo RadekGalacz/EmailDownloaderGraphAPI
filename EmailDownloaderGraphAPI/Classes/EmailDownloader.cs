@@ -29,7 +29,7 @@ namespace EmailGraphAPI.Classes {
         }
 
         // Metoda vrací seřazené emaily v pořadí, v jakém přišly
-        private async Task<List<Microsoft.Graph.Models.Message>> LoadEmailsAsync() {
+        private async Task<List<Message>> LoadEmailsAsync() {
 
             _log.Info("=== Spouštím aplikaci pro stahování e-mailů ===");
 
@@ -38,7 +38,7 @@ namespace EmailGraphAPI.Classes {
                 _graphClient = _graphAuthProvider.GetAuthenticatedClient();
             }
 
-            List<Microsoft.Graph.Models.Message> allMessages = new List<Microsoft.Graph.Models.Message>();
+            List<Message> allMessages = new List<Message>();
 
             // Načtení seznamu zpráv z inboxu zadané emailové schránky
             var messages = await _graphClient.Users[_config.Mailbox]
@@ -59,11 +59,11 @@ namespace EmailGraphAPI.Classes {
             return allMessages.OrderBy(msg => msg.ReceivedDateTime).ToList();
         }
 
-        // Asynchronní metoda pro zpracování emailů pomocí strákování
+        // Asynchronní metoda pro zpracování emailů pomocí stránkování
         // https://learn.microsoft.com/en-us/graph/sdks/paging?tabs=csharp
-        private async Task ProcessEmailPagesAsync(MessageCollectionResponse messages, List<Microsoft.Graph.Models.Message> allMessages) {
+        private async Task ProcessEmailPagesAsync(MessageCollectionResponse messages, List<Message> allMessages) {
             // Vytvoření PageIterator pro stránkování
-            var pageIterator = PageIterator<Microsoft.Graph.Models.Message, MessageCollectionResponse>
+            var pageIterator = PageIterator<Message, MessageCollectionResponse>
                 .CreatePageIterator(
                     _graphClient,
                     messages,
@@ -97,7 +97,7 @@ namespace EmailGraphAPI.Classes {
                 _log.Info($"Složka pro ukládání emailu úspěšně načtená {_config.DownloadPath}, aktuálně obsahuje tyto podsložky:\n{vypis}");
             }
             else {
-                // Pokud složka neexistuje, votvořit ji
+                // Pokud složka neexistuje, vytvořit ji
                 _log.Info($"Vytvářím novou složku pro e-maily: {_config.DownloadPath}");
                 di.Create();
             }
@@ -106,7 +106,7 @@ namespace EmailGraphAPI.Classes {
         // Asynchronní metoda pro ukládání id emailů do souboru donwloadedEmails.TXT
         private async Task SaveIdsToFileAsync(string id) {
             if (!string.IsNullOrWhiteSpace(id)) {
-                // Uložení ID emailo do souboru downloadedEmails.TXT pro zamezení opětovného stažení
+                // Uložení ID emailů do souboru downloadedEmails.TXT pro zamezení opětovného stažení
                 string downloadedPath = Path.Combine(_config.DownloadPath, "downloadedEmails.txt");
                 await File.AppendAllTextAsync(downloadedPath, id + Environment.NewLine);
                 _log.Debug($"Zapsáno ID emailu do seznamu stažených: {id}");
@@ -142,7 +142,7 @@ namespace EmailGraphAPI.Classes {
         // Metoda pro vytvoření unikátních názvu podsložek
         private async Task<string> CreateUniqueFolderPathAsync(string basePath, string subject) {
             // Oříznutí délky názvu předmětu na maxLength
-            var maxLength = 100;
+            int maxLength = 100;
             if (subject.Length > maxLength) {
                 subject = subject.Substring(0, maxLength);
             }
@@ -167,7 +167,7 @@ namespace EmailGraphAPI.Classes {
                 // Ověření přístupu podle "AllowedMailBoxes" z config .json
                 AuthenticationMailBoxesCheck();
 
-                var orderedMessages = await LoadEmailsAsync(); // Přiřazení metody načtených emaliů do proměnné
+                List<Message> orderedMessages = await LoadEmailsAsync(); // Přiřazení metody načtených emaliů do proměnné
 
                 // Vytvoření Hlavní složky pro emaily - podle config.JSON
                 CreateFolderForEmails();
@@ -175,7 +175,7 @@ namespace EmailGraphAPI.Classes {
                 _log.Info($"Z config.json bylo načteno datum pro stažení emailů od: {_config.StartDate.Date.ToString("yyyy-MM-dd")}");
 
                 // Načtení již stažených ID uložených v.TXT
-                var downloadedIds = await GetSavedIdsAsync();
+                List<string> downloadedIds = await GetSavedIdsAsync();
                 
                 // Cysklus pro každý email ve složce Inbox
                 foreach (var msg in orderedMessages) {
@@ -188,7 +188,7 @@ namespace EmailGraphAPI.Classes {
                         .GetAsync();
 
                     // Získání datumu přijetí emailů
-                    var emailReceivedDateTime = msg.ReceivedDateTime?.UtcDateTime;
+                    DateTime? emailReceivedDateTime = msg.ReceivedDateTime?.UtcDateTime;
 
                     if (emailReceivedDateTime == null) continue;
 
@@ -198,7 +198,7 @@ namespace EmailGraphAPI.Classes {
                         continue;
                     }
 
-                    var subfolderPath = await CreateUniqueFolderPathAsync(_config.DownloadPath, msg.Subject);  // Přiřazení metody pro vytvoření unikátních názvů složek do proměnné
+                    string subfolderPath = await CreateUniqueFolderPathAsync(_config.DownloadPath, msg.Subject);  // Přiřazení metody pro vytvoření unikátních názvů složek do proměnné
 
                     // Pokud podsložky existují, přerušit stahování
                     if (downloadedIds.Contains(msg.InternetMessageId)) {
@@ -216,7 +216,7 @@ namespace EmailGraphAPI.Classes {
                         }
 
                         // Uložení emailů do souboru ve formátu .eml
-                        var filePath = Path.Combine(subfolderPath, $"message.eml");
+                        string filePath = Path.Combine(subfolderPath, $"message.eml");
                         using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write);
                         await content.CopyToAsync(fs);
 
