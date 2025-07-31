@@ -1,4 +1,6 @@
-﻿using log4net;
+﻿using EmailGraphAPI.Class;
+using EmailGraphAPI.Interface;
+using log4net;
 
 namespace EmailGraphAPI.Classes {
 
@@ -13,7 +15,12 @@ namespace EmailGraphAPI.Classes {
 
                 AppConfigProps config = AppController.LoadConfig(); // Spuštění staticé metody pro deserializaci z config.json do props
                 GraphAuthProvider auth = new GraphAuthProvider(config); // Autentizace aplikace
-                EmailDownloader email = new EmailDownloader(auth, config);
+
+                IFoldersOperations foldersOps = new FolderOperations(config);
+                IFilesOperations filesOps = new FileOperations(config);
+                IEmailOperations emailsOps = new EmailOperations(auth, config);
+
+                EmailDownloader email = new EmailDownloader(auth, config, foldersOps, filesOps, emailsOps);
 
                 await email.DownloadEmailsAsync();
 
